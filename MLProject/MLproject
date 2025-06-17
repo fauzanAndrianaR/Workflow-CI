@@ -1,0 +1,25 @@
+# MLProject/MLProject
+name: Personality_Classification_Project
+
+conda_env: conda.yaml
+
+entry_points:
+  main:
+    command: "python modelling.py"
+
+---
+# MLProject/conda.yaml
+name: personality_ml_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12.7
+  - pip
+  - pip:
+      - mlflow==2.19.0
+      - scikit-learn
+      - pandas
+      - numpy
+      - matplotlib
+      - seaborn

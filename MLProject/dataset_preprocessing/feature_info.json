@@ -1,0 +1,16 @@
+{
+  "features": [
+    "Age",
+    "RestingBP",
+    "Cholesterol",
+    "FastingBS",
+    "MaxHR",
+    "Oldpeak",
+    "Sex_encoded",
+    "ChestPainType_encoded",
+    "RestingECG_encoded",
+    "ExerciseAngina_encoded",
+    "ST_Slope_encoded"
+  ],
+  "target_classes": [
+    

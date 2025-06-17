@@ -1,0 +1,86 @@
+name: ML Training CI - Basic
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "Workflow-CI/**"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "Workflow-CI/**"
+  workflow_dispatch:
+
+jobs:
+  train-basic:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up job
+        run: |
+          echo "Starting ML Training CI - Basic workflow"
+          echo "Workflow started at: $(date)"
+
+      - name: Run actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12.7"
+
+      - name: Check Env
+        run: |
+          echo "Checking environment..."
+          python --version
+          pip --version
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+
+      - name: Install dependencies
+        run: |
+          echo "Installing dependencies..."
+          python -m pip install --upgrade pip
+          cd MLProject
+          pip install -r requirements.txt
+          echo "Dependencies installed successfully"
+
+      - name: Run mlflow project
+        run: |
+          cd MLProject
+          echo "Starting MLflow project..."
+          echo "Running model training..."
+          python modelling.py
+          echo "MLflow project completed"
+
+      - name: Get latest MLflow run id
+        run: |
+          cd MLProject
+          echo "Getting latest MLflow run information..."
+          python -c "
+          import mlflow
+          import os
+          if os.path.exists('mlruns'):
+              print('MLflow artifacts generated')
+              print('MLruns directory contents:')
+              os.system('find mlruns -name \"*.json\" | head -5')
+              
+              # Try to get the latest run ID
+              try:
+                  experiments = mlflow.search_experiments()
+                  if experiments:
+                      runs = mlflow.search_runs(experiment_ids=[experiments[0].experiment_id])
+                      if not runs.empty:
+                          latest_run_id = runs.iloc[0]['run_id']
+                          print(f'Latest Run ID: {latest_run_id}')
+                      else:
+                          print('No runs found')
+                  else:
+                      print('No experiments found')
+              except Exception as e:
+                  print(f'Could not retrieve run info: {e}')
+          else:
+              print('No mlruns directory found')
+          "
+          echo "Workflow completed successfully!"
