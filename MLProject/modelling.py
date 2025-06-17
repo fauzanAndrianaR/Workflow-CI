@@ -1,162 +1,128 @@
+import os
+import sys
 import mlflow
 import mlflow.sklearn
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
-import sys
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
-# Ensure compatibility
 print(f"MLflow version: {mlflow.__version__}")
 print(f"Python version: {sys.version}")
-print(f"Current working directory: {os.getcwd()}")
+print(f"Working directory: {os.getcwd()}")
 
-def setup_mlflow():
-    """Setup MLflow experiment"""
-    experiment_name = "CI_ML_Experiment_Basic"
-    
+def configure_experiment():
+    """Initialize or create MLflow experiment for CI"""
+    name = "Basic_CI_Experiment"
     try:
-        # Try to set experiment
-        mlflow.set_experiment(experiment_name)
-        print(f"✅ Experiment '{experiment_name}' set successfully")
-    except Exception as e:
-        print(f"⚠️  Error setting experiment: {e}")
-        # Create experiment if it doesn't exist
+        mlflow.set_experiment(name)
+        print(f"✔️ Experiment '{name}' is now active.")
+    except Exception as err:
+        print(f"⚠️ Failed to set experiment: {err}")
         try:
-            mlflow.create_experiment(experiment_name)
-            mlflow.set_experiment(experiment_name)
-            print(f"✅ Experiment '{experiment_name}' created and set")
-        except Exception as e2:
-            print(f"❌ Failed to create experiment: {e2}")
+            mlflow.create_experiment(name)
+            mlflow.set_experiment(name)
+            print(f"📌 Created and switched to experiment '{name}'")
+        except Exception as err2:
+            print(f"❌ Could not create experiment: {err2}")
             raise
 
-def load_data():
-    """Load preprocessed data with error handling"""
+def read_dataset():
+    """Read dataset from preprocessing folder with validation"""
     try:
-        # Check if files exist
-        files_to_check = [
-            './dataset_preprocessing/X_train.csv',
-            './dataset_preprocessing/X_test.csv', 
-            './dataset_preprocessing/y_train.csv',
-            './dataset_preprocessing/y_test.csv'
-        ]
-        
-        for file in files_to_check:
-            if not os.path.exists(file):
-                raise FileNotFoundError(f"Required file not found: {file}")
-        
-        # Load data
-        X_train = pd.read_csv('./dataset_preprocessing/X_train.csv')
-        X_test = pd.read_csv('./dataset_preprocessing/X_test.csv')
-        y_train = pd.read_csv('./dataset_preprocessing/y_train.csv')['target'].values
-        y_test = pd.read_csv('./dataset_preprocessing/y_test.csv')['target'].values
+        base_path = "./dataset_preprocessing"
+        files = ["X_train.csv", "X_test.csv", "y_train.csv", "y_test.csv"]
+        for fname in files:
+            path = os.path.join(base_path, fname)
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"Missing file: {path}")
 
-        print(f"📊 Data loaded successfully:")
-        print(f"   - Training set: {X_train.shape}")
-        print(f"   - Test set: {X_test.shape}")
-        print(f"   - Training labels: {len(y_train)}")
-        print(f"   - Test labels: {len(y_test)}")
-        print(f"   - Features: {list(X_train.columns)}")
+        X_train = pd.read_csv(os.path.join(base_path, "X_train.csv"))
+        X_test = pd.read_csv(os.path.join(base_path, "X_test.csv"))
+        y_train = pd.read_csv(os.path.join(base_path, "y_train.csv"))["target"].values
+        y_test = pd.read_csv(os.path.join(base_path, "y_test.csv"))["target"].values
 
+        print("📁 Dataset successfully loaded:")
+        print(f"   Training data: {X_train.shape}, Labels: {len(y_train)}")
+        print(f"   Test data: {X_test.shape}, Labels: {len(y_test)}")
         return X_train, X_test, y_train, y_test
-        
-    except Exception as e:
-        print(f"❌ Error loading data: {e}")
-        print("💡 Make sure you have copied dataset files from kriteria 1")
+
+    except Exception as err:
+        print(f"❌ Failed to load dataset: {err}")
+        print("🔍 Make sure the preprocessing step has been completed.")
         raise
 
-def train_model():
-    """Train model with CI-friendly configuration"""
-    
-    print("🎯 Starting CI ML Training - Basic Level")
-    print("=" * 50)
-    
-    # Setup MLflow
-    setup_mlflow()
-    
-    with mlflow.start_run(run_name="CI_Basic_Training"):
-        try:
-            # Load data
-            X_train, X_test, y_train, y_test = load_data()
+def run_training():
+    """Train Random Forest model and log results to MLflow"""
+    print("🚦 Initiating basic CI model training...")
+    print("-" * 50)
 
-            # Model configuration - simple for CI
-            model_params = {
-                'n_estimators': 50,  # Reduced for faster CI
-                'random_state': 42,
-                'max_depth': 5,      # Simplified for CI
-                'n_jobs': 1          # Single job for CI stability
+    configure_experiment()
+
+    with mlflow.start_run(run_name="CI_Train_Run"):
+        try:
+            X_train, X_test, y_train, y_test = read_dataset()
+
+            config = {
+                "n_estimators": 50,
+                "max_depth": 5,
+                "random_state": 42,
+                "n_jobs": 1
             }
 
-            print("🤖 Training Random Forest model...")
-            print(f"   Parameters: {model_params}")
-            
-            # Train model
-            model = RandomForestClassifier(**model_params)
+            print("🧠 Training RandomForest model with config:")
+            print(config)
+
+            model = RandomForestClassifier(**config)
             model.fit(X_train, y_train)
+            predictions = model.predict(X_test)
 
-            # Predictions
-            y_pred = model.predict(X_test)
-            accuracy = accuracy_score(y_test, y_pred)
+            acc = accuracy_score(y_test, predictions)
 
-            # Log parameters and metrics
-            mlflow.log_params(model_params)
-            mlflow.log_metric("accuracy", accuracy)
-            mlflow.log_metric("train_samples", len(X_train))
-            mlflow.log_metric("test_samples", len(X_test))
-            mlflow.log_metric("n_features", X_train.shape[1])
+            mlflow.log_params(config)
+            mlflow.log_metrics({
+                "accuracy": acc,
+                "train_size": len(X_train),
+                "test_size": len(X_test),
+                "feature_count": X_train.shape[1]
+            })
 
-            # Create simple confusion matrix
-            cm = confusion_matrix(y_test, y_pred)
+            cm = confusion_matrix(y_test, predictions)
             plt.figure(figsize=(6, 4))
-            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                       xticklabels=['1', '0'],
-                       yticklabels=['1', '0'])
-            plt.title('CI Basic - Confusion Matrix')
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["1", "0"], yticklabels=["1", "0"])
+            plt.title("Confusion Matrix - Basic CI")
             plt.tight_layout()
-            
-            # Save plot
-            cm_path = 'confusion_matrix_ci_basic.png'
-            plt.savefig(cm_path, dpi=150, bbox_inches='tight')
-            plt.close()  # Close to save memory in CI
-            
-            # Log model and artifacts
-            mlflow.sklearn.log_model(model, "model", registered_model_name="PersonalityClassifier_CI_Basic")
-            mlflow.log_artifact(cm_path)
 
-            # Print results
-            print(f"\n=== CI TRAINING RESULTS ===")
-            print(f"✅ Model trained successfully!")
-            print(f"🎯 Accuracy: {accuracy:.4f}")
-            print(f"📊 Confusion Matrix saved: {cm_path}")
-            
-            print(f"\n=== CLASSIFICATION REPORT ===")
-            print(classification_report(y_test, y_pred, target_names=['1', '0']))
+            cm_filename = "conf_matrix_ci.png"
+            plt.savefig(cm_filename, dpi=150)
+            plt.close()
 
-            # Cleanup
-            if os.path.exists(cm_path):
-                os.remove(cm_path)
+            mlflow.sklearn.log_model(model, "random_forest_model", registered_model_name="CI_RF_Model_Basic")
+            mlflow.log_artifact(cm_filename)
 
-            return model, accuracy
+            print("\n✅ Model training complete.")
+            print(f"🔢 Accuracy: {acc:.4f}")
+            print("📈 Classification Report:")
+            print(classification_report(y_test, predictions, target_names=["1", "0"]))
 
-        except Exception as e:
-            print(f"❌ Error during training: {e}")
-            mlflow.log_param("error", str(e))
+            if os.path.exists(cm_filename):
+                os.remove(cm_filename)
+
+            return model, acc
+
+        except Exception as err:
+            print(f"❌ An error occurred during training: {err}")
+            mlflow.log_param("error", str(err))
             raise
 
 if __name__ == "__main__":
+    print("🚀 Launching training process...")
     try:
-        print("🚀 Starting CI-friendly ML training...")
-        model, accuracy = train_model()
-        print(f"\n🎉 Training completed successfully!")
-        print(f"🏆 Final accuracy: {accuracy:.4f}")
-        
-        # Exit with success code
+        model, final_acc = run_training()
+        print(f"\n🏁 Process finished. Final Accuracy: {final_acc:.4f}")
         sys.exit(0)
-        
     except Exception as e:
-        print(f"\n💥 Training failed: {e}")
-        # Exit with error code for CI
+        print(f"\n🔥 Training process failed: {e}")
         sys.exit(1)
