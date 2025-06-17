@@ -17,6 +17,15 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12.7'
+      
+      - name: Check Env
+        run: |
+          echo "Checking environment..."
+          python --version
+          pip --version
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
 
       - name: Install dependencies
         run: |
