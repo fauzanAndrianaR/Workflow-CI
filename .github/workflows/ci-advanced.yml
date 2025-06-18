@@ -59,7 +59,7 @@ jobs:
       - name: Build Docker Model
         run: |
           cd MLProject
-          docker build -t ml-personality-model:latest .
+          docker build -t heart-failure-model:latest .
           echo "Docker build complete"
 
       - name: Log in to Docker Hub
