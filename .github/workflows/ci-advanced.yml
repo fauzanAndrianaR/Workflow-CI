@@ -39,7 +39,7 @@ jobs:
       - name: Run mlflow project
         run: |
           cd MLProject
-          python modelling_advanced.py
+          python modellingadvanced.py
           echo "MLflow project executed"
 
       - name: Get latest MLflow run_id
