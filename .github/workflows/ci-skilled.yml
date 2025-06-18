@@ -57,7 +57,7 @@ jobs:
         run: |
           cd MLProject
           echo "Starting MLflow project (Skilled)..."
-          python modelling_skilled.py
+          python modellingskilled.py
           echo "MLflow project completed"
 
       - name: Install Python dependencies
